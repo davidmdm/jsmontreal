@@ -17,3 +17,19 @@ const multiply = async function(a, b) {
 };
 
 multiply(5, 6).then(console.log);
+
+// therefore we should be able to write a function "Async"
+
+const Async = function(generator) {
+  return function() {
+    return; // promise
+  };
+};
+
+// such that this function is analagous to async/await
+
+const add = Async(function*(a, b) {
+  const x = yield a;
+  const y = yield b;
+  return x + y;
+});
