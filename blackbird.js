@@ -20,13 +20,33 @@ class Blackbird {
 
   then(cb) {
     if (this.state === 'resolved') {
-      return new Blackbird(resolve => resolve(cb(this.value)));
+      return Blackbird.resolve(cb(this.value));
     }
 
     return new Blackbird(resolve => this.callbacks.push(x => resolve(cb(x))));
+  }
+
+  static resolve(value) {
+    return new Blackbird(resolve => resolve(value));
+  }
+
+  static all(birds) {
+    const result = [];
+    let count = 0;
+    return new Blackbird(resolve => {
+      birds.forEach((bird, i) => {
+        Blackbird.resolve(bird).then(val => {
+          result[i] = val;
+          count++;
+          if (count === birds.length) {
+            resolve(result);
+          }
+        });
+      });
+    });
   }
 }
 
 const asyncReturn = (val, ms) => new Blackbird(resolve => setTimeout(resolve, ms, val));
 
-new Blackbird(resolve => setTimeout(resolve, 1000, asyncReturn('hello jsmontreal', 2000))).then(console.log);
+Blackbird.all([asyncReturn('hello', 1000), asyncReturn('jsmontreal', 2000)]).then(results => console.log(...results));
