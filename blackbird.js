@@ -1,6 +1,14 @@
 'use strict';
 
-class Blackbird {
+const _resolver = (resolve, reject, fn, val) => {
+  try {
+    resolve(fn(val));
+  } catch (err) {
+    reject(err);
+  }
+};
+
+module.exports = class Blackbird {
   constructor(fn) {
     this.state = 'pending';
     this.callbacks = [];
@@ -35,13 +43,7 @@ class Blackbird {
 
   then(cb, handler) {
     if (this.state === 'resolved') {
-      return new Blackbird((resolve, reject) => {
-        try {
-          resolve(cb(this.value));
-        } catch (err) {
-          reject(err);
-        }
-      });
+      return new Blackbird((resolve, reject) => _resolver(resolve, reject, cb, this.value));
     }
 
     if (this.state === 'rejected') {
@@ -49,31 +51,15 @@ class Blackbird {
         if (!handler) {
           return reject(err);
         }
-        try {
-          resolve(handler(this.error));
-        } catch (err) {
-          reject(err);
-        }
+        _resolver(resolve, reject, handler, this.error);
       });
     }
 
     return new Blackbird((resolve, reject) => {
-      this.callbacks.push(x => {
-        try {
-          resolve(cb(x));
-        } catch (err) {
-          reject(err);
-        }
-      });
+      this.callbacks.push(x => _resolver(resolve, reject, cb, x));
 
       if (handler) {
-        this.handlers.push(x => {
-          try {
-            resolve(handler(x));
-          } catch (err) {
-            reject(err);
-          }
-        });
+        this.handlers.push(x => _resolver(resolve, reject, handler, x));
       } else {
         this.handlers.push(x => reject(x));
       }
@@ -95,35 +81,18 @@ class Blackbird {
   static all(birds) {
     const result = [];
     let count = 0;
-    return new Blackbird(resolve => {
+    return new Blackbird((resolve, reject) => {
       birds.forEach((bird, i) => {
-        Blackbird.resolve(bird).then(val => {
-          result[i] = val;
-          count++;
-          if (count === birds.length) {
-            resolve(result);
-          }
-        });
+        Blackbird.resolve(bird)
+          .then(val => {
+            result[i] = val;
+            count++;
+            if (count === birds.length) {
+              resolve(result);
+            }
+          })
+          .catch(reject);
       });
     });
   }
-}
-
-const fs = require('fs');
-
-const readFile = file =>
-  new Blackbird((resolve, reject) =>
-    fs.readFile(file, 'utf8', (err, data) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(data);
-      }
-    })
-  );
-
-readFile('./.gitignore')
-  .then(console.log)
-  .then(() => readFile('./doesnotexist'))
-  .then(() => console.log('weird there should be no file'))
-  .catch(err => console.error('error:', err));
+};
