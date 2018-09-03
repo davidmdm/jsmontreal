@@ -3,10 +3,10 @@
 const fs = require('fs');
 
 const Async = require('./async');
-const Promise = require('./blackbird');
+const Blackbird = require('./blackbird');
 
 const write = (file, txt) =>
-  new Promise((resolve, reject) =>
+  new Blackbird((resolve, reject) =>
     fs.writeFile(file, txt, 'utf8', err => {
       if (err) {
         reject(err);
@@ -17,7 +17,7 @@ const write = (file, txt) =>
   );
 
 const read = file =>
-  new Promise((resolve, reject) =>
+  new Blackbird((resolve, reject) =>
     fs.readFile(file, 'utf8', (err, data) => {
       if (err) {
         reject(err);
@@ -27,7 +27,7 @@ const read = file =>
     })
   );
 
-const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+const sleep = ms => new Blackbird(resolve => setTimeout(resolve, ms));
 
 const run = Async(function*() {
   yield write('./jsmontreal.txt', 'Putting it all together now!');
